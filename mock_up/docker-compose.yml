@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: crud
+      POSTGRES_USER: crud
+      POSTGRES_PASSWORD: crud
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crud -d crud"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.16.0
+    command: mlflow server --host 0.0.0.0 --port 5001 --backend-store-uri sqlite:///mlruns.db --default-artifact-root /mlartifacts
+    ports:
+      - "5001:5001"
+    volumes:
+      - mlflow_data:/mlartifacts
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      APP_ENV: dev
+      DB_URL: postgresql+psycopg://crud:crud@db:5432/crud
+      MLFLOW_TRACKING_URI: http://mlflow:5001
+      MODEL_FLAVOR: sklearn
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      mlflow:
+        condition: service_started
+    volumes:
+      - ./.env:/app/.env:ro
+      - ./sistema-crud/data:/app/sistema-crud/data
+      - ./sistema-crud/logs:/app/sistema-crud/logs
+
+volumes:
+  db_data:
+  mlflow_data:
+
+

@@ -1,0 +1,2 @@
+# Este projeto usa as dependências no requirements.txt da raiz.
+# Mantenha este arquivo vazio ou use apenas extras específicos do pipeline local.

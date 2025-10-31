@@ -1,0 +1,10 @@
+# X:
+#   type: MemoryDataSet
+# y:
+#   type: MemoryDataSet
+# model:
+#   type: MemoryDataSet
+# metrics:
+#   type: MemoryDataSet
+# train_result:
+#   type: MemoryDataSet

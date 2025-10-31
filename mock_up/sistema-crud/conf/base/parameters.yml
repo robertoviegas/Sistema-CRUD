@@ -1,0 +1,8 @@
+train:
+  flavor: sklearn
+  mlflow_tracking_uri: http://localhost:5001
+  n_samples: 200
+  n_features: 3
+  noise: 0.1
+  epochs: 5
+  seed: 42
