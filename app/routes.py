@@ -1,7 +1,6 @@
 import os
 import sys
 
-import pandas as pd
 from flask import Flask, jsonify, request
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
@@ -19,11 +18,6 @@ except Exception:
 
 from .config import Settings
 from .db import get_engine, get_session_factory
-from .ml.drift import (
-    maybe_run_evidently_and_log,
-    push_production_sample,
-    simple_drift_signal,
-)
 from .ml.metrics import compute_per_prediction_metrics
 from .ml.registry import ModelRegistryAdapter
 from .models import ModelRegistry, Prediction, PredictionMetric, Retraining
@@ -32,23 +26,6 @@ from .schemas import PredictRequest, PredictResponse
 settings = Settings()
 engine = get_engine(settings.db_url)
 SessionFactory = get_session_factory(settings.db_url)
-
-
-# carregar baseline opcional
-_baseline_df = None
-_feature_order = None
-if settings.evidently_baseline_csv:
-    try:
-        _baseline_df = pd.read_csv(settings.evidently_baseline_csv)
-        if settings.evidently_feature_keys:
-            _feature_order = [
-                k.strip()
-                for k in settings.evidently_feature_keys.split(",")
-                if k.strip()
-            ]
-    except Exception:
-        _baseline_df = None
-        _feature_order = None
 
 
 def register_routes(app: Flask) -> None:
@@ -108,27 +85,7 @@ def register_routes(app: Flask) -> None:
                     )
                 )
 
-            drift_map = simple_drift_signal(data.features)
-            for name, value in drift_map.items():
-                session.add(
-                    PredictionMetric(
-                        prediction_id=pred_row.id,
-                        name=f"drift::{name}",
-                        value=float(value),
-                    )
-                )
-
             session.commit()
-
-        # Alimenta buffer de produção e dispara Evidently se possível
-        push_production_sample(data.features, y_pred)
-        maybe_run_evidently_and_log(
-            baseline_df=_baseline_df,
-            feature_order=_feature_order,
-            window_size=settings.evidently_window_size,
-            min_samples=settings.evidently_min_samples,
-            mlflow_tracking_uri=settings.mlflow_tracking_uri,
-        )
 
         resp = PredictResponse(
             prediction_id=pred_id,
@@ -136,7 +93,7 @@ def register_routes(app: Flask) -> None:
             model_id=model_row.id,
             metrics=[
                 {"name": k, "value": float(v)}
-                for k, v in {**metrics_map, **drift_map}.items()
+                for k, v in metrics_map.items()
             ],
         )
         return jsonify(resp.model_dump())

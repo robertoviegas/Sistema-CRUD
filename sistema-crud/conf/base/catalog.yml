@@ -1,6 +1,6 @@
 train_data:
   type: pandas.CSVDataSet
-  filepath: data/01_raw/train.csv
+  filepath: data/05_model_input/train.csv
 
 # X:
 #   type: MemoryDataSet

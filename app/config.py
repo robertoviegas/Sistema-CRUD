@@ -16,19 +16,6 @@ class Settings(BaseSettings):
         default="", validation_alias="AWS_SECRET_ACCESS_KEY"
     )
     model_flavor: str = Field(default="sklearn", validation_alias="MODEL_FLAVOR")
-    # Evidently / Monitoramento
-    evidently_baseline_csv: str | None = Field(
-        default=None, validation_alias="EVIDENTLY_BASELINE_CSV"
-    )
-    evidently_window_size: int = Field(
-        default=200, validation_alias="EVIDENTLY_WINDOW_SIZE"
-    )
-    evidently_min_samples: int = Field(
-        default=50, validation_alias="EVIDENTLY_MIN_SAMPLES"
-    )
-    evidently_feature_keys: str | None = Field(
-        default=None, validation_alias="EVIDENTLY_FEATURE_KEYS"
-    )  # csv de chaves de features
 
     class Config:
         env_file = ".env"

@@ -10,12 +10,11 @@ sistema_crud_path = os.path.join(os.path.dirname(__file__), "sistema-crud", "src
 if sistema_crud_path not in sys.path:
     sys.path.append(sistema_crud_path)
 
-from run import run_training_kedro
-
 from app import create_app
 from app import routes as _routes  # ensure routes are registered
 from app.config import Settings
 from app.db import Base, get_engine
+from run import run_training_kedro
 
 
 @click.group()
@@ -68,5 +67,4 @@ def predict_csv(csv_path: str, url: str, feature_cols: str, y_col: str, limit: i
 
 
 if __name__ == "__main__":
-    cli()
     cli()
