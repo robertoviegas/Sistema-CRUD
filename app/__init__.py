@@ -1,6 +1,7 @@
 from flask import Flask
 
 from .config import Settings
+from .routes import register_routes
 
 settings = Settings()
 
@@ -13,9 +14,6 @@ def create_app() -> Flask:
     app = Flask(__name__)
     app.config.update(_DEF_JSON_CFG)
 
-    from .routes import register_routes
-
     register_routes(app)
 
     return app
-

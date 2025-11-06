@@ -1,14 +1,3 @@
 train_data:
   type: pandas.CSVDataSet
   filepath: data/05_model_input/train.csv
-
-# X:
-#   type: MemoryDataSet
-# y:
-#   type: MemoryDataSet
-# model:
-#   type: MemoryDataSet
-# metrics:
-#   type: MemoryDataSet
-# train_result:
-#   type: MemoryDataSet

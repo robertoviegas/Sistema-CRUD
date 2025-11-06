@@ -1,10 +1,17 @@
 from __future__ import annotations
 
+import urllib.error
+import urllib.request
+import uuid
 from typing import Dict, Tuple
+from urllib.parse import urlparse
 
 import mlflow
+import mlflow.sklearn as msk
 import numpy as np
 import pandas as pd
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
 
 
@@ -70,8 +77,6 @@ def split_data(
 def train_model(X: np.ndarray, y: np.ndarray, params: Dict):
     flavor = params.get("flavor", "sklearn")
     if flavor == "sklearn":
-        from sklearn.linear_model import LinearRegression
-
         model = LinearRegression().fit(X, y)
         return model
     else:
@@ -83,8 +88,6 @@ def evaluate_model(
 ) -> Dict[str, float]:
     flavor = params.get("flavor", "sklearn")
     if flavor == "sklearn":
-        from sklearn.metrics import mean_squared_error, r2_score
-
         pred = model.predict(X)
         mse = float(mean_squared_error(y, pred))
         r2 = float(r2_score(y, pred))
@@ -126,9 +129,6 @@ def log_to_mlflow(
     if tracking_uri:
         try:
             # Testar conexão rápida com timeout curto
-            import urllib.error
-            import urllib.request
-            from urllib.parse import urlparse
 
             parsed = urlparse(tracking_uri)
             # Tentar acessar a raiz do MLflow (não precisa ser /health, pode ser qualquer endpoint)
@@ -158,17 +158,16 @@ def log_to_mlflow(
             mlflow.log_metrics(metrics)
             flavor = params.get("flavor", "sklearn")
             if flavor == "sklearn":
-                import mlflow.sklearn as msk
-
                 # Criar input_example usando o número real de features do modelo
+                # O input_example deve ser um numpy array 2D (uma amostra com n_features)
                 n_features = getattr(
                     model, "n_features_in_", int(params.get("n_features", 3))
                 )
-                input_example = [[0.0] * n_features]
+                input_example = np.array([[0.0] * n_features])
 
                 msk.log_model(
                     model,
-                    artifact_path="model",
+                    artifact_path="model",  # artifact_path ainda funciona, mas name é preferido
                     input_example=input_example,
                 )
             else:
@@ -198,13 +197,12 @@ def log_to_mlflow(
                 mlflow.log_metrics(metrics)
                 flavor = params.get("flavor", "sklearn")
                 if flavor == "sklearn":
-                    import mlflow.sklearn as msk
-
                     # Criar input_example usando o número real de features do modelo
+                    # O input_example deve ser um numpy array 2D (uma amostra com n_features)
                     n_features = getattr(
                         model, "n_features_in_", int(params.get("n_features", 3))
                     )
-                    input_example = [[0.0] * n_features]
+                    input_example = np.array([[0.0] * n_features])
 
                     msk.log_model(
                         model,
@@ -222,7 +220,6 @@ def log_to_mlflow(
                 }
         except Exception as e2:
             # Se falhar completamente, retornar métricas sem MLflow
-            import uuid
 
             run_id = uuid.uuid4().hex
             version = run_id[:8]

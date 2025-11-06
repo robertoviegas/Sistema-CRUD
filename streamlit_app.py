@@ -34,8 +34,6 @@ if uploaded_file is not None:
     st.success(f"✅ Arquivo carregado: {uploaded_file.name}")
 
     # Mostrar preview dos dados
-    import pandas as pd
-
     try:
         df = pd.read_csv(uploaded_file)
         st.subheader("📊 Preview do Dataset")

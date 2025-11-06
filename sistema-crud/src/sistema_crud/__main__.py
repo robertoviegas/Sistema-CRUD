@@ -4,6 +4,7 @@ as `sistema-crud` and `python -m sistema_crud`
 import importlib
 from pathlib import Path
 
+from kedro.framework.cli.project import run as kedro_run
 from kedro.framework.cli.utils import KedroCliError, load_entry_points
 from kedro.framework.project import configure_project
 
@@ -21,9 +22,7 @@ def _find_run_command(package_name):
             # use run command from installed plugin if it exists
             return run
         # use run command from `kedro.framework.cli.project`
-        from kedro.framework.cli.project import run
-
-        return run
+        return kedro_run
     # fail badly if cli.py exists, but has no `cli` in it
     if not hasattr(project_cli, "cli"):
         raise KedroCliError(f"Cannot load commands from {package_name}.cli")

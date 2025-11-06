@@ -4,6 +4,16 @@ import sys
 from flask import Flask, jsonify, request
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
+from .config import Settings
+from .db import get_engine, get_session_factory
+from .ml.metrics import compute_per_prediction_metrics
+from .ml.registry import ModelRegistryAdapter
+from .models import ModelRegistry, Prediction, PredictionMetric, Retraining
+from .schemas import PredictRequest, PredictResponse
+try:
+    from sistema_crud.src.run import run_training_kedro  # se instalado como pacote
+except Exception:
+    from run import run_training_kedro  
 
 # garantir que o path do Kedro (sistema-crud/src) esteja disponível
 _KEDRO_SRC = os.path.join(
@@ -11,17 +21,8 @@ _KEDRO_SRC = os.path.join(
 )
 if _KEDRO_SRC not in sys.path:
     sys.path.append(_KEDRO_SRC)
-try:
-    from sistema_crud.src.run import run_training_kedro  # se instalado como pacote
-except Exception:
-    from run import run_training_kedro  # fallback direto do src
+# fallback direto do src
 
-from .config import Settings
-from .db import get_engine, get_session_factory
-from .ml.metrics import compute_per_prediction_metrics
-from .ml.registry import ModelRegistryAdapter
-from .models import ModelRegistry, Prediction, PredictionMetric, Retraining
-from .schemas import PredictRequest, PredictResponse
 
 settings = Settings()
 engine = get_engine(settings.db_url)

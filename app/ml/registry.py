@@ -1,6 +1,7 @@
 import uuid
 from typing import Any, Dict, Optional
 
+import mlflow.sklearn as msk
 import numpy as np
 from sklearn.linear_model import LinearRegression
 
@@ -15,8 +16,6 @@ class ModelRegistryAdapter:
         if self.model_uri:
             try:
                 if self.flavor == "sklearn":
-                    import mlflow.sklearn as msk
-
                     return msk.load_model(self.model_uri)
                 else:
                     raise ValueError("Unsupported flavor: %s" % self.flavor)
