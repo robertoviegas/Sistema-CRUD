@@ -12,7 +12,7 @@ API de predição com persistência, métricas por predição, retreino e troca 
 ### Variáveis (.env)
 APP_ENV=dev
 DB_URL=sqlite+pysqlite:///./crud.db
-MLFLOW_TRACKING_URI=http://localhost:5001
+MLFLOW_TRACKING_URI=http://localhost:5000
 AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=changeme
 AWS_SECRET_ACCESS_KEY=changeme
@@ -33,6 +33,17 @@ MODEL_FLAVOR=sklearn
 - python manage.py run - Roda servidor Flask
 - python manage.py train-kedro - Executa treino via Kedro
 - python manage.py predict-csv train.csv --feature-cols "col1,col2,col3" --y-col "target" --limit 10 - Testa predições com CSV
+
+### Interface Streamlit
+Para usar a interface gráfica:
+1. Certifique-se de que o servidor Flask está rodando: `python manage.py run`
+2. Execute: `streamlit run streamlit_app.py`
+3. A interface abrirá no navegador onde você pode:
+   - Fazer upload do arquivo CSV de treino
+   - Salvar o arquivo no diretório correto
+   - Executar o treinamento
+   - Ver os resultados e métricas
+   - Acessar o MLflow diretamente
 
 ### Testando com train.csv
 ```bash

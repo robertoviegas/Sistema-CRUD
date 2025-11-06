@@ -1,3 +1,4 @@
 mlartifacts/
 mlruns/
 .env
+app/__pycache__/

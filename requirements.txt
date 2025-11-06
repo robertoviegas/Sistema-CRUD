@@ -14,7 +14,7 @@ scikit-learn>=1.6.0
 kedro==0.18.13
 kedro-datasets[pandas.CSVDataSet]>=2.0.0
 click
-requests
+streamlit
 # pytest
 # pytest-cov
 # gunicorn

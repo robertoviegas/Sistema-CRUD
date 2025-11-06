@@ -91,10 +91,7 @@ def register_routes(app: Flask) -> None:
             prediction_id=pred_id,
             prediction=y_pred,
             model_id=model_row.id,
-            metrics=[
-                {"name": k, "value": float(v)}
-                for k, v in metrics_map.items()
-            ],
+            metrics=[{"name": k, "value": float(v)} for k, v in metrics_map.items()],
         )
         return jsonify(resp.model_dump())
 
@@ -241,26 +238,33 @@ def register_routes(app: Flask) -> None:
     def train():
         result = run_training_kedro(settings.model_flavor, settings.mlflow_tracking_uri)
         with Session(engine) as session:
+            mlflow_run_id = result.get("mlflow_run_id")
             row = ModelRegistry(
                 flavor=settings.model_flavor,
-                version=str(result.get("version")),
-                mlflow_run_id=str(result.get("mlflow_run_id")),
+                version=str(result.get("version", "unknown")),
+                mlflow_run_id=str(mlflow_run_id) if mlflow_run_id is not None else None,
             )
             session.add(row)
             session.flush()
             retr = Retraining(model_id=row.id, triggered_by="api", notes="kedro-train")
             session.add(retr)
             session.commit()
+            # Acessar atributos antes de sair do bloco with para evitar DetachedInstanceError
+            model_id = row.id
+            flavor = row.flavor
+            version = row.version
+            mlflow_run_id_value = row.mlflow_run_id
+            retraining_id = retr.id
         return jsonify(
             {
-                "model_id": row.id,
-                "flavor": row.flavor,
-                "version": row.version,
-                "mlflow_run_id": row.mlflow_run_id,
+                "model_id": model_id,
+                "flavor": flavor,
+                "version": version,
+                "mlflow_run_id": mlflow_run_id_value,
                 "mse": float(result.get("mse", 0.0)),
                 "r2": float(result.get("r2", 0.0)),
                 "mape": float(result.get("mape", 0.0)),
                 "meape": float(result.get("meape", 0.0)),
-                "retraining_id": retr.id,
+                "retraining_id": retraining_id,
             }
         )

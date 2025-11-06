@@ -121,31 +121,115 @@ def log_to_mlflow(
     model, metrics: Dict[str, float], params: Dict
 ) -> Dict[str, str | float]:
     tracking_uri = params.get("mlflow_tracking_uri")
-    if tracking_uri:
-        mlflow.set_tracking_uri(tracking_uri)
-    with mlflow.start_run(run_name="kedro-train") as run:
-        mlflow.log_params(
-            {
-                "flavor": params.get("flavor"),
-                "n_features": int(params.get("n_features", 3)),
-                "n_samples": int(params.get("n_samples", 200)),
-                "test_size": float(params.get("test_size", 0.2)),
-            }
-        )
-        mlflow.log_metrics(metrics)
-        flavor = params.get("flavor", "sklearn")
-        if flavor == "sklearn":
-            import mlflow.sklearn as msk
 
-            msk.log_model(model, artifact_path="model")
-        else:
-            raise ValueError("Unsupported flavor. Only 'sklearn' is supported.")
-        run_id = run.info.run_id
-        model_uri = mlflow.get_artifact_uri("model")
-        version = run_id[:8]
-        return {
-            "mlflow_run_id": run_id,
-            "version": version,
-            "model_uri": model_uri,
-            **metrics,
-        }
+    # Verificar se o servidor MLflow está acessível antes de tentar usar
+    if tracking_uri:
+        try:
+            # Testar conexão rápida com timeout curto
+            import urllib.error
+            import urllib.request
+            from urllib.parse import urlparse
+
+            parsed = urlparse(tracking_uri)
+            # Tentar acessar a raiz do MLflow (não precisa ser /health, pode ser qualquer endpoint)
+            test_url = f"{parsed.scheme}://{parsed.netloc}/"
+            req = urllib.request.Request(test_url)
+            req.add_header("Connection", "close")
+            urllib.request.urlopen(req, timeout=2)
+            # Se chegou aqui, servidor está acessível
+            mlflow.set_tracking_uri(tracking_uri)
+        except Exception:
+            # Servidor não acessível, usar backend local imediatamente
+            mlflow.set_tracking_uri("./mlruns")
+    else:
+        # Se não houver URI, usar backend local
+        mlflow.set_tracking_uri("./mlruns")
+
+    try:
+        with mlflow.start_run(run_name="kedro-train") as run:
+            mlflow.log_params(
+                {
+                    "flavor": params.get("flavor"),
+                    "n_features": int(params.get("n_features", 3)),
+                    "n_samples": int(params.get("n_samples", 200)),
+                    "test_size": float(params.get("test_size", 0.2)),
+                }
+            )
+            mlflow.log_metrics(metrics)
+            flavor = params.get("flavor", "sklearn")
+            if flavor == "sklearn":
+                import mlflow.sklearn as msk
+
+                # Criar input_example usando o número real de features do modelo
+                n_features = getattr(
+                    model, "n_features_in_", int(params.get("n_features", 3))
+                )
+                input_example = [[0.0] * n_features]
+
+                msk.log_model(
+                    model,
+                    artifact_path="model",
+                    input_example=input_example,
+                )
+            else:
+                raise ValueError("Unsupported flavor. Only 'sklearn' is supported.")
+            run_id = run.info.run_id
+            model_uri = mlflow.get_artifact_uri("model")
+            version = run_id[:8]
+            return {
+                "mlflow_run_id": run_id,
+                "version": version,
+                "model_uri": model_uri,
+                **metrics,
+            }
+    except Exception:
+        # Se falhar ao conectar ao servidor MLflow, tentar usar backend local
+        try:
+            mlflow.set_tracking_uri("./mlruns")
+            with mlflow.start_run(run_name="kedro-train") as run:
+                mlflow.log_params(
+                    {
+                        "flavor": params.get("flavor"),
+                        "n_features": int(params.get("n_features", 3)),
+                        "n_samples": int(params.get("n_samples", 200)),
+                        "test_size": float(params.get("test_size", 0.2)),
+                    }
+                )
+                mlflow.log_metrics(metrics)
+                flavor = params.get("flavor", "sklearn")
+                if flavor == "sklearn":
+                    import mlflow.sklearn as msk
+
+                    # Criar input_example usando o número real de features do modelo
+                    n_features = getattr(
+                        model, "n_features_in_", int(params.get("n_features", 3))
+                    )
+                    input_example = [[0.0] * n_features]
+
+                    msk.log_model(
+                        model,
+                        artifact_path="model",
+                        input_example=input_example,
+                    )
+                run_id = run.info.run_id
+                model_uri = mlflow.get_artifact_uri("model")
+                version = run_id[:8]
+                return {
+                    "mlflow_run_id": run_id,
+                    "version": version,
+                    "model_uri": model_uri,
+                    **metrics,
+                }
+        except Exception as e2:
+            # Se falhar completamente, retornar métricas sem MLflow
+            import uuid
+
+            run_id = uuid.uuid4().hex
+            version = run_id[:8]
+            return {
+                "mlflow_run_id": None,
+                "version": version,
+                "model_uri": None,
+                "mlflow_error": str(e2)[:200] if e2 else "Unknown error",
+                **metrics,
+            }

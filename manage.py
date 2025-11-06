@@ -10,11 +10,12 @@ sistema_crud_path = os.path.join(os.path.dirname(__file__), "sistema-crud", "src
 if sistema_crud_path not in sys.path:
     sys.path.append(sistema_crud_path)
 
+from run import run_training_kedro
+
 from app import create_app
 from app import routes as _routes  # ensure routes are registered
 from app.config import Settings
 from app.db import Base, get_engine
-from run import run_training_kedro
 
 
 @click.group()
@@ -25,9 +26,17 @@ def cli():
 @cli.command("run")
 @click.option("--host", default="0.0.0.0")
 @click.option("--port", default=8000, type=int)
-def run(host: str, port: int):
+@click.option("--debug", is_flag=True, default=False, help="Enable debug mode")
+@click.option(
+    "--reload",
+    is_flag=True,
+    default=False,
+    help="Enable auto-reload (only works with --debug)",
+)
+def run(host: str, port: int, debug: bool, reload: bool):
     app = create_app()
-    app.run(host=host, port=port, debug=True)
+    # Desabilitar reloader por padrão para evitar reinícios quando MLflow modifica arquivos
+    app.run(host=host, port=port, debug=debug, use_reloader=reload)
 
 
 @cli.command("init-db")

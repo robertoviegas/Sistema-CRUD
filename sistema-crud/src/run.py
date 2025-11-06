@@ -46,24 +46,24 @@ def run_training_kedro(
     catalog.add("metrics", MemoryDataSet())
     catalog.add("train_result", MemoryDataSet())
 
-    # Adicionar parâmetros
-    catalog.add(
-        "params:train",
-        {
-            "flavor": flavor,
-            "mlflow_tracking_uri": tracking_uri,
-            "target_column": "SalePrice",
-            "test_size": 0.2,
-            "seed": 42,
-        },
-    )
+    # Carregar parâmetros do arquivo de configuração e atualizar com valores dinâmicos
+    params_config = config_loader.get("parameters*", "parameters*/**")
+    train_params = params_config.get("train", {})
+    # Atualizar com valores dinâmicos
+    train_params["flavor"] = flavor
+    train_params["mlflow_tracking_uri"] = tracking_uri
+    train_params["target_column"] = "SalePrice"
+
+    # Adicionar parâmetros usando MemoryDataSet
+    catalog.add("params:train", MemoryDataSet(train_params))
 
     runner = SequentialRunner()
     runner.run(pipeline, catalog)
-    result = catalog.get("train_result")
+    # Usar load() ao invés de get() para obter dados do catálogo
+    result = catalog.load("train_result")
     return {
-        "mlflow_run_id": result["mlflow_run_id"],
-        "version": result["version"],
+        "mlflow_run_id": result.get("mlflow_run_id"),
+        "version": result.get("version", "unknown"),
         "model_path": result.get("model_uri"),
         "mse": float(result.get("mse", 0.0)),
         "r2": float(result.get("r2", 0.0)),
