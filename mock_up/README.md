@@ -1,6 +1,6 @@
 ## Sistema-CRUD com Flask, Kedro e MLflow
 
-API de predição com persistência, métricas por predição, drift/robustez, retreino e troca de tipo de modelo (scikit-learn/TensorFlow). Usa MLflow e Kedro.
+API de predição com persistência, métricas por predição, drift/robustez, retreino e troca de tipo de modelo (scikit-learn). Usa MLflow e Kedro.
 
 ### Como rodar
 1. Ative seu ambiente conda: `conda activate <seu_ambiente>`
@@ -30,7 +30,7 @@ EVIDENTLY_FEATURE_KEYS=
 - GET /models - Lista modelos registrados
 - GET /retrainings - Lista retreinamentos
 - POST /train - Treina modelo via pipeline Kedro
-- POST /switch-model - Troca tipo de modelo (sklearn/tensorflow)
+- POST /switch-model - Troca tipo de modelo (sklearn)
 - DELETE /records/{table}/{id} - Deleta registro
 
 ### Comandos CLI
@@ -59,7 +59,7 @@ python manage.py predict-csv train.csv --feature-cols "MSSubClass,LotFrontage,Lo
 - Métricas por predição (incluindo erro quando y_true fornecido)
 - Detecção de drift com Evidently (baseline configurável)
 - Retreino via pipeline Kedro com registro no MLflow
-- Troca de tipo de modelo (sklearn/TensorFlow)
+- Troca de tipo de modelo (sklearn)
 - Consultas paginadas e filtradas
 - Carregamento de modelos do MLflow
 

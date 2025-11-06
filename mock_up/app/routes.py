@@ -272,8 +272,8 @@ def register_routes(app: Flask) -> None:
     def switch_model():
         body = request.get_json(force=True) or {}
         new_flavor = body.get("flavor")
-        if new_flavor not in {"sklearn", "tensorflow"}:
-            return jsonify({"error": "flavor must be sklearn or tensorflow"}), 400
+        if new_flavor not in {"sklearn"}:
+            return jsonify({"error": "flavor must be sklearn"}), 400
         with Session(engine) as session:
             row = ModelRegistry(flavor=new_flavor, version="v0", mlflow_run_id=None)
             session.add(row)
@@ -301,6 +301,9 @@ def register_routes(app: Flask) -> None:
                 "version": row.version,
                 "mlflow_run_id": row.mlflow_run_id,
                 "mse": float(result.get("mse", 0.0)),
+                "r2": float(result.get("r2", 0.0)),
+                "mape": float(result.get("mape", 0.0)),
+                "meape": float(result.get("meape", 0.0)),
                 "retraining_id": retr.id,
             }
         )

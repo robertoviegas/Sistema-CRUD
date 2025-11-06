@@ -1,7 +1,7 @@
 [tool.kedro]
 package_name = "sistema_crud"
 project_name = "sistema_crud"
-kedro_init_version = "0.18.3"
+kedro_init_version = "0.18.13"
 
 [tool.isort]
 profile = "black"

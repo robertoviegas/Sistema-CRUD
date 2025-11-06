@@ -18,10 +18,6 @@ class ModelRegistryAdapter:
                     import mlflow.sklearn as msk
 
                     return msk.load_model(self.model_uri)
-                elif self.flavor == "tensorflow":
-                    import mlflow.tensorflow as mtf
-
-                    return mtf.load_model(self.model_uri)
                 else:
                     raise ValueError("Unsupported flavor: %s" % self.flavor)
             except Exception:
@@ -33,13 +29,6 @@ class ModelRegistryAdapter:
             model.coef_ = np.array([1.0])
             model.intercept_ = 0.0
             model.n_features_in_ = 1
-            return model
-        elif self.flavor == "tensorflow":
-            import tensorflow as tf
-
-            model = tf.keras.Sequential(
-                [tf.keras.layers.Input((1,)), tf.keras.layers.Dense(1)]
-            )
             return model
         else:
             raise ValueError("Unsupported flavor: %s" % self.flavor)
@@ -66,16 +55,8 @@ class ModelRegistryAdapter:
             xs = self._align_features(xs, expected)
             y = model.predict(xs)
             return float(y[0])
-        elif self.flavor == "tensorflow":
-            try:
-                expected = int(getattr(model.input_shape, 1, xs.shape[1]))
-            except Exception:
-                expected = xs.shape[1]
-            xs = self._align_features(xs, expected)
-            y = model(xs, training=False).numpy()
-            return float(y[0][0])
         else:
-            raise ValueError("Invalid flavor")
+            raise ValueError("Invalid flavor. Only 'sklearn' is supported.")
 
     def new_prediction_id(self) -> str:
         return uuid.uuid4().hex
