@@ -1,6 +1,6 @@
 train:
   flavor: sklearn
-  mlflow_tracking_uri: http://localhost:5001
+  mlflow_tracking_uri: http://localhost:6001
   n_samples: 200
   n_features: 3
   noise: 0.1

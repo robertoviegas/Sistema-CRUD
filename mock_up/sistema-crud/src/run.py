@@ -13,7 +13,7 @@ def run_training_kedro(
     flavor: str, tracking_uri: str | None = None
 ) -> Dict[str, str | float]:
     pipeline = create_pipeline()
-    catalog = DataCatalog(
+    catalog = DataCatalog(data_sets=
         {
             "X": MemoryDataSet(),
             "y": MemoryDataSet(),
@@ -33,7 +33,7 @@ def run_training_kedro(
     )
     runner = SequentialRunner()
     runner.run(pipeline, catalog)
-    result = catalog.load("train_result")
+    result = catalog.get("train_result")
     return {
         "mlflow_run_id": result["mlflow_run_id"],
         "version": result["version"],
