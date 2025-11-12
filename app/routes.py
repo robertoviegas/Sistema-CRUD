@@ -4,16 +4,18 @@ import sys
 from flask import Flask, jsonify, request
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
+
 from .config import Settings
 from .db import get_engine, get_session_factory
 from .ml.metrics import compute_per_prediction_metrics
 from .ml.registry import ModelRegistryAdapter
 from .models import ModelRegistry, Prediction, PredictionMetric, Retraining
 from .schemas import PredictRequest, PredictResponse
+
 try:
     from sistema_crud.src.run import run_training_kedro  # se instalado como pacote
 except Exception:
-    from run import run_training_kedro  
+    from run import run_training_kedro
 
 # garantir que o path do Kedro (sistema-crud/src) esteja disponível
 _KEDRO_SRC = os.path.join(
@@ -51,18 +53,13 @@ def register_routes(app: Flask) -> None:
             )
             if not model_row:
                 model_row = ModelRegistry(
-                    flavor=settings.model_flavor, version="v0", mlflow_run_id=None
+                    flavor=settings.model_flavor, version="v0", model_path=None
                 )
                 session.add(model_row)
                 session.commit()
                 session.refresh(model_row)
 
-            model_uri = (
-                f"runs:/{model_row.mlflow_run_id}/model"
-                if model_row.mlflow_run_id
-                else None
-            )
-            adapter = ModelRegistryAdapter(model_row.flavor, model_uri)
+            adapter = ModelRegistryAdapter(model_row.flavor, model_row.model_path)
             model = adapter.load_active()
             y_pred = adapter.predict(model, data.features)
 
@@ -166,7 +163,7 @@ def register_routes(app: Flask) -> None:
                         "id": r.id,
                         "flavor": r.flavor,
                         "version": r.version,
-                        "mlflow_run_id": r.mlflow_run_id,
+                        "model_path": r.model_path,
                         "created_at": r.created_at.isoformat(),
                     }
                     for r in rows
@@ -230,20 +227,20 @@ def register_routes(app: Flask) -> None:
         if new_flavor not in {"sklearn"}:
             return jsonify({"error": "flavor must be sklearn"}), 400
         with Session(engine) as session:
-            row = ModelRegistry(flavor=new_flavor, version="v0", mlflow_run_id=None)
+            row = ModelRegistry(flavor=new_flavor, version="v0", model_path=None)
             session.add(row)
             session.commit()
             return jsonify({"model_id": row.id, "flavor": row.flavor})
 
     @app.post("/train")
     def train():
-        result = run_training_kedro(settings.model_flavor, settings.mlflow_tracking_uri)
+        result = run_training_kedro(settings.model_flavor)
         with Session(engine) as session:
-            mlflow_run_id = result.get("mlflow_run_id")
+            model_path = result.get("model_path")
             row = ModelRegistry(
                 flavor=settings.model_flavor,
                 version=str(result.get("version", "unknown")),
-                mlflow_run_id=str(mlflow_run_id) if mlflow_run_id is not None else None,
+                model_path=str(model_path) if model_path is not None else None,
             )
             session.add(row)
             session.flush()
@@ -254,14 +251,14 @@ def register_routes(app: Flask) -> None:
             model_id = row.id
             flavor = row.flavor
             version = row.version
-            mlflow_run_id_value = row.mlflow_run_id
+            model_path_value = row.model_path
             retraining_id = retr.id
         return jsonify(
             {
                 "model_id": model_id,
                 "flavor": flavor,
                 "version": version,
-                "mlflow_run_id": mlflow_run_id_value,
+                "model_path": model_path_value,
                 "mse": float(result.get("mse", 0.0)),
                 "r2": float(result.get("r2", 0.0)),
                 "mape": float(result.get("mape", 0.0)),

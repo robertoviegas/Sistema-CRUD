@@ -1,6 +1,6 @@
-## Sistema-CRUD com Flask, Kedro e MLflow
+## Sistema-CRUD com Flask e Kedro
 
-API de predição com persistência, métricas por predição, retreino e troca de tipo de modelo (scikit-learn). Usa MLflow e Kedro.
+API de predição com persistência, métricas por predição, retreino e troca de tipo de modelo (scikit-learn). Usa Kedro para pipelines de treinamento e salva modelos localmente.
 
 ### Como rodar
 1. Ative seu ambiente conda: `conda activate <seu_ambiente>`
@@ -12,7 +12,6 @@ API de predição com persistência, métricas por predição, retreino e troca 
 ### Variáveis (.env)
 APP_ENV=dev
 DB_URL=sqlite+pysqlite:///./crud.db
-MLFLOW_TRACKING_URI=http://localhost:5000
 AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=changeme
 AWS_SECRET_ACCESS_KEY=changeme
@@ -30,6 +29,7 @@ MODEL_FLAVOR=sklearn
 
 ### Comandos CLI
 - python manage.py init-db - Inicializa banco de dados
+- python manage.py migrate-db - Adiciona coluna model_path ao banco de dados existente (execute após remover MLflow)
 - python manage.py run - Roda servidor Flask
 - python manage.py train-kedro - Executa treino via Kedro
 - python manage.py predict-csv train.csv --feature-cols "col1,col2,col3" --y-col "target" --limit 10 - Testa predições com CSV
@@ -43,7 +43,7 @@ Para usar a interface gráfica:
    - Salvar o arquivo no diretório correto
    - Executar o treinamento
    - Ver os resultados e métricas
-   - Acessar o MLflow diretamente
+   - Visualizar o banco de dados com todas as execuções
 
 ### Testando com train.csv
 ```bash
@@ -63,8 +63,9 @@ python manage.py predict-csv train.csv --feature-cols "MSSubClass,LotFrontage,Lo
 ### Funcionalidades
 - Predição com ID único e persistência
 - Métricas por predição (incluindo erro quando y_true fornecido)
-- Retreino via pipeline Kedro com registro no MLflow
+- Retreino via pipeline Kedro com salvamento local de modelos
 - Troca de tipo de modelo (sklearn)
 - Consultas paginadas e filtradas
-- Carregamento de modelos do MLflow
+- Carregamento de modelos salvos localmente (usando joblib)
+- Visualização de métricas e histórico no Streamlit
 

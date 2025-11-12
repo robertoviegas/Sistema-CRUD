@@ -1,13 +1,10 @@
 from __future__ import annotations
 
-import urllib.error
-import urllib.request
 import uuid
+from pathlib import Path
 from typing import Dict, Tuple
-from urllib.parse import urlparse
 
-import mlflow
-import mlflow.sklearn as msk
+import joblib
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
@@ -120,113 +117,54 @@ def evaluate_model(
         raise ValueError("Unsupported flavor. Only 'sklearn' is supported.")
 
 
-def log_to_mlflow(
+def save_model_local(
     model, metrics: Dict[str, float], params: Dict
 ) -> Dict[str, str | float]:
-    tracking_uri = params.get("mlflow_tracking_uri")
-
-    # Verificar se o servidor MLflow está acessível antes de tentar usar
-    if tracking_uri:
-        try:
-            # Testar conexão rápida com timeout curto
-
-            parsed = urlparse(tracking_uri)
-            # Tentar acessar a raiz do MLflow (não precisa ser /health, pode ser qualquer endpoint)
-            test_url = f"{parsed.scheme}://{parsed.netloc}/"
-            req = urllib.request.Request(test_url)
-            req.add_header("Connection", "close")
-            urllib.request.urlopen(req, timeout=2)
-            # Se chegou aqui, servidor está acessível
-            mlflow.set_tracking_uri(tracking_uri)
-        except Exception:
-            # Servidor não acessível, usar backend local imediatamente
-            mlflow.set_tracking_uri("./mlruns")
-    else:
-        # Se não houver URI, usar backend local
-        mlflow.set_tracking_uri("./mlruns")
-
+    """
+    Salva o modelo localmente usando joblib e retorna as métricas e informações do modelo.
+    
+    Args:
+        model: Modelo treinado
+        metrics: Dicionário com as métricas calculadas
+        params: Parâmetros de configuração
+        
+    Returns:
+        Dicionário com version, model_path e métricas
+    """
+    flavor = params.get("flavor", "sklearn")
+    
+    # Gerar ID único para esta execução
+    run_id = uuid.uuid4().hex
+    version = run_id[:8]
+    
+    # Definir caminho para salvar o modelo
+    # Usar diretório models/ na raiz do projeto sistema-crud
+    project_root = Path(__file__).parent.parent.parent.parent
+    models_dir = project_root / "data" / "06_models"
+    models_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Nome do arquivo do modelo baseado no version
+    model_filename = f"model_{version}.pkl"
+    model_path = models_dir / model_filename
+    
     try:
-        with mlflow.start_run(run_name="kedro-train") as run:
-            mlflow.log_params(
-                {
-                    "flavor": params.get("flavor"),
-                    "n_features": int(params.get("n_features", 3)),
-                    "n_samples": int(params.get("n_samples", 200)),
-                    "test_size": float(params.get("test_size", 0.2)),
-                }
-            )
-            mlflow.log_metrics(metrics)
-            flavor = params.get("flavor", "sklearn")
-            if flavor == "sklearn":
-                # Criar input_example usando o número real de features do modelo
-                # O input_example deve ser um numpy array 2D (uma amostra com n_features)
-                n_features = getattr(
-                    model, "n_features_in_", int(params.get("n_features", 3))
-                )
-                input_example = np.array([[0.0] * n_features])
-
-                msk.log_model(
-                    model,
-                    artifact_path="model",  # artifact_path ainda funciona, mas name é preferido
-                    input_example=input_example,
-                )
-            else:
-                raise ValueError("Unsupported flavor. Only 'sklearn' is supported.")
-            run_id = run.info.run_id
-            model_uri = mlflow.get_artifact_uri("model")
-            version = run_id[:8]
-            return {
-                "mlflow_run_id": run_id,
-                "version": version,
-                "model_uri": model_uri,
-                **metrics,
-            }
-    except Exception:
-        # Se falhar ao conectar ao servidor MLflow, tentar usar backend local
-        try:
-            mlflow.set_tracking_uri("./mlruns")
-            with mlflow.start_run(run_name="kedro-train") as run:
-                mlflow.log_params(
-                    {
-                        "flavor": params.get("flavor"),
-                        "n_features": int(params.get("n_features", 3)),
-                        "n_samples": int(params.get("n_samples", 200)),
-                        "test_size": float(params.get("test_size", 0.2)),
-                    }
-                )
-                mlflow.log_metrics(metrics)
-                flavor = params.get("flavor", "sklearn")
-                if flavor == "sklearn":
-                    # Criar input_example usando o número real de features do modelo
-                    # O input_example deve ser um numpy array 2D (uma amostra com n_features)
-                    n_features = getattr(
-                        model, "n_features_in_", int(params.get("n_features", 3))
-                    )
-                    input_example = np.array([[0.0] * n_features])
-
-                    msk.log_model(
-                        model,
-                        artifact_path="model",
-                        input_example=input_example,
-                    )
-                run_id = run.info.run_id
-                model_uri = mlflow.get_artifact_uri("model")
-                version = run_id[:8]
-                return {
-                    "mlflow_run_id": run_id,
-                    "version": version,
-                    "model_uri": model_uri,
-                    **metrics,
-                }
-        except Exception as e2:
-            # Se falhar completamente, retornar métricas sem MLflow
-
-            run_id = uuid.uuid4().hex
-            version = run_id[:8]
-            return {
-                "mlflow_run_id": None,
-                "version": version,
-                "model_uri": None,
-                "mlflow_error": str(e2)[:200] if e2 else "Unknown error",
-                **metrics,
-            }
+        if flavor == "sklearn":
+            # Salvar modelo usando joblib
+            joblib.dump(model, model_path)
+        else:
+            raise ValueError("Unsupported flavor. Only 'sklearn' is supported.")
+        
+        # Retornar informações do modelo e métricas
+        return {
+            "version": version,
+            "model_path": str(model_path),
+            **metrics,
+        }
+    except Exception as e:
+        # Se falhar ao salvar, ainda retornar métricas
+        return {
+            "version": version,
+            "model_path": None,
+            "save_error": str(e)[:200] if e else "Unknown error",
+            **metrics,
+        }

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from kedro.pipeline import Pipeline, node
 
-from .nodes import evaluate_model, generate_data, log_to_mlflow, split_data, train_model
+from .nodes import evaluate_model, generate_data, save_model_local, split_data, train_model
 
 
 def create_pipeline() -> Pipeline:
@@ -33,10 +33,10 @@ def create_pipeline() -> Pipeline:
                 name="evaluate_model",
             ),
             node(
-                func=log_to_mlflow,
+                func=save_model_local,
                 inputs=["model", "metrics", "params:train"],
                 outputs="train_result",
-                name="log_to_mlflow",
+                name="save_model_local",
             ),
         ]
     )

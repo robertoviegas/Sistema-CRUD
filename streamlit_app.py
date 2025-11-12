@@ -7,7 +7,6 @@ from sqlalchemy import create_engine, inspect
 
 # Configurações
 API_URL = "http://localhost:8000"
-MLFLOW_URL = "http://localhost:5000"
 TRAIN_FILE_PATH = Path(
     r"C:\Users\rvdutra\Documents\Sistema-CRUD\sistema-crud\data\05_model_input\train.csv"
 )
@@ -116,35 +115,15 @@ with col1:
                             )
 
                         with info_col3:
-                            mlflow_run_id = result.get("mlflow_run_id")
-                            if mlflow_run_id:
-                                st.write(f"**MLflow Run ID:** {mlflow_run_id}")
+                            model_path = result.get("model_path")
+                            if model_path:
+                                st.write(f"**Model Path:** {model_path}")
                             else:
-                                st.warning("⚠️ MLflow Run ID não disponível")
+                                st.warning("⚠️ Caminho do modelo não disponível")
 
                         # Resposta completa (expansível)
                         with st.expander("📋 Resposta Completa da API"):
                             st.json(result)
-
-                        # Botão para abrir MLflow
-                        if mlflow_run_id:
-                            st.markdown("---")
-                            st.subheader("🔗 Acessar MLflow")
-                            mlflow_link = (
-                                f"{MLFLOW_URL}/#/experiments/0/runs/{mlflow_run_id}"
-                            )
-                            st.markdown(f"[🔗 Abrir MLflow em nova aba]({mlflow_link})")
-
-                            # Auto-redirecionar se o usuário quiser
-                            if st.button(
-                                "🌐 Abrir MLflow Automaticamente",
-                                use_container_width=True,
-                            ):
-                                st.markdown(
-                                    f'<meta http-equiv="refresh" content="0; url={mlflow_link}">',
-                                    unsafe_allow_html=True,
-                                )
-                                st.info("Redirecionando para MLflow...")
                     else:
                         st.error(f"❌ Erro no treinamento: {response.status_code}")
                         try:
@@ -271,11 +250,10 @@ st.sidebar.markdown(
     2. Clique em "Salvar Arquivo"
     3. Clique em "Iniciar Treinamento"
     4. Aguarde o resultado
-    5. Acesse o MLflow para ver mais detalhes
+    5. Visualize as métricas e o banco de dados
     
     ### Endpoints:
     - **API:** http://localhost:8000
-    - **MLflow:** http://localhost:5000
     
     ### Arquivo de treino:
     O arquivo será salvo em:

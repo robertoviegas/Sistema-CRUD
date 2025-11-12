@@ -12,6 +12,8 @@ if sistema_crud_path not in sys.path:
 
 from run import run_training_kedro
 
+from sqlalchemy import inspect, text
+
 from app import create_app
 from app import routes as _routes  # ensure routes are registered
 from app.config import Settings
@@ -35,7 +37,6 @@ def cli():
 )
 def run(host: str, port: int, debug: bool, reload: bool):
     app = create_app()
-    # Desabilitar reloader por padrão para evitar reinícios quando MLflow modifica arquivos
     app.run(host=host, port=port, debug=debug, use_reloader=reload)
 
 
@@ -47,10 +48,35 @@ def init_db():
     click.echo("Database initialized.")
 
 
+@cli.command("migrate-db")
+def migrate_db():
+    """Adiciona a coluna model_path à tabela models se ela não existir."""
+    settings = Settings()
+    engine = get_engine(settings.db_url)
+    
+    # Verificar se a tabela models existe
+    inspector = inspect(engine)
+    if "models" not in inspector.get_table_names():
+        click.echo("Tabela 'models' não existe. Execute 'python manage.py init-db' primeiro.")
+        return
+    
+    # Verificar se a coluna model_path já existe
+    columns = [col["name"] for col in inspector.get_columns("models")]
+    
+    if "model_path" not in columns:
+        with engine.connect() as conn:
+            # SQLite não suporta IF NOT EXISTS em ALTER TABLE, então verificamos antes
+            conn.execute(text("ALTER TABLE models ADD COLUMN model_path VARCHAR(500)"))
+            conn.commit()
+        click.echo("✅ Coluna 'model_path' adicionada à tabela 'models'.")
+    else:
+        click.echo("ℹ️  Coluna 'model_path' já existe na tabela 'models'.")
+
+
 @cli.command("train-kedro")
 def train_kedro():
     settings = Settings()
-    result = run_training_kedro(settings.model_flavor, settings.mlflow_tracking_uri)
+    result = run_training_kedro(settings.model_flavor)
     click.echo(result)
 
 

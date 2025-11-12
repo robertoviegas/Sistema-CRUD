@@ -11,7 +11,8 @@ class ModelRegistry(Base):
     id = Column(Integer, primary_key=True)
     flavor = Column(String(50), nullable=False)
     version = Column(String(100), nullable=False)
-    mlflow_run_id = Column(String(100), nullable=True)
+    model_path = Column(String(500), nullable=True)  # Caminho do modelo salvo localmente
+    mlflow_run_id = Column(String(100), nullable=True)  # Mantido apenas para compatibilidade com dados antigos
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 

@@ -10,7 +10,7 @@ from sistema_crud.pipelines.train.pipeline import create_pipeline
 
 
 def run_training_kedro(
-    flavor: str, tracking_uri: str | None = None
+    flavor: str
 ) -> Dict[str, str | float]:
     pipeline = create_pipeline()
 
@@ -51,7 +51,6 @@ def run_training_kedro(
     train_params = params_config.get("train", {})
     # Atualizar com valores dinâmicos
     train_params["flavor"] = flavor
-    train_params["mlflow_tracking_uri"] = tracking_uri
     train_params["target_column"] = "SalePrice"
 
     # Adicionar parâmetros usando MemoryDataSet
@@ -62,9 +61,8 @@ def run_training_kedro(
     # Usar load() ao invés de get() para obter dados do catálogo
     result = catalog.load("train_result")
     return {
-        "mlflow_run_id": result.get("mlflow_run_id"),
         "version": result.get("version", "unknown"),
-        "model_path": result.get("model_uri"),
+        "model_path": result.get("model_path"),
         "mse": float(result.get("mse", 0.0)),
         "r2": float(result.get("r2", 0.0)),
         "mape": float(result.get("mape", 0.0)),

@@ -1,6 +1,5 @@
 train:
   flavor: sklearn
-  mlflow_tracking_uri: http://127.0.0.1:5000/
   n_samples: 200
   n_features: 3
   noise: 0.1

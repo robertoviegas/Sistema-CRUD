@@ -1,22 +1,24 @@
+import os
 import uuid
+from pathlib import Path
 from typing import Any, Dict, Optional
 
-import mlflow.sklearn as msk
+import joblib
 import numpy as np
 from sklearn.linear_model import LinearRegression
 
 
 class ModelRegistryAdapter:
-    def __init__(self, flavor: str, model_uri: Optional[str] = None):
+    def __init__(self, flavor: str, model_path: Optional[str] = None):
         self.flavor = flavor
-        self.model_uri = model_uri
+        self.model_path = model_path
 
     def load_active(self):
-        # Se houver um model_uri (ex.: runs:/<run_id>/model), tenta carregar do MLflow
-        if self.model_uri:
+        # Se houver um model_path, tenta carregar do arquivo local
+        if self.model_path and os.path.exists(self.model_path):
             try:
                 if self.flavor == "sklearn":
-                    return msk.load_model(self.model_uri)
+                    return joblib.load(self.model_path)
                 else:
                     raise ValueError("Unsupported flavor: %s" % self.flavor)
             except Exception:
@@ -59,3 +61,14 @@ class ModelRegistryAdapter:
 
     def new_prediction_id(self) -> str:
         return uuid.uuid4().hex
+
+    @staticmethod
+    def save_model(model, model_path: str, flavor: str = "sklearn"):
+        """Salva o modelo em um arquivo local usando joblib."""
+        if flavor == "sklearn":
+            # Criar diretório se não existir
+            Path(model_path).parent.mkdir(parents=True, exist_ok=True)
+            joblib.dump(model, model_path)
+            return model_path
+        else:
+            raise ValueError("Unsupported flavor: %s" % flavor)
