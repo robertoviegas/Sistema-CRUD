@@ -18,6 +18,9 @@ services:
       - app-network
 
   api:
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: sistema-crud-api
     environment:
       APP_ENV: dev
@@ -34,8 +37,17 @@ services:
       - ./sistema-crud/logs:/app/sistema-crud/logs
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
 
   streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
     image: sistema-crud-streamlit
     environment:
       API_URL: http://api:8000
@@ -45,8 +57,10 @@ services:
     ports:
       - "8501:8501"
     depends_on:
-      - api
-      - db
+      api:
+        condition: service_healthy
+      db:
+        condition: service_healthy
     volumes:
       - ./sistema-crud/data:/app/data/sistema-crud/data
       - ./crud.db:/app/data/crud.db

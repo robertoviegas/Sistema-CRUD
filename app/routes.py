@@ -2,6 +2,7 @@ import os
 import sys
 
 from flask import Flask, jsonify, request
+from flask_swagger_ui import get_swaggerui_blueprint
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
@@ -32,6 +33,27 @@ SessionFactory = get_session_factory(settings.db_url)
 
 
 def register_routes(app: Flask) -> None:
+    # Configurar Swagger UI
+    SWAGGER_URL = "/swagger"
+    API_URL = "/openapi.json"
+
+    swaggerui_blueprint = get_swaggerui_blueprint(
+        SWAGGER_URL, API_URL, config={"app_name": "Sistema CRUD API"}
+    )
+    app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
+
+    # Endpoint para servir a especificação OpenAPI
+    @app.get("/openapi.json")
+    def openapi_spec():
+        from .openapi_spec import get_openapi_spec
+
+        # Atualizar a URL do servidor dinamicamente baseado na requisição
+        spec = get_openapi_spec()
+        # Usar a URL da requisição para o servidor
+        request_url = request.url_root.rstrip("/")
+        spec["servers"] = [{"url": request_url, "description": "Servidor atual"}]
+        return jsonify(spec)
+
     @app.get("/health")
     def health():
         return {

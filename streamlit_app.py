@@ -9,14 +9,9 @@ from sqlalchemy import create_engine, inspect
 # Configurações - usar variáveis de ambiente ou valores padrão
 API_URL = os.getenv("API_URL", "http://localhost:8000")
 TRAIN_FILE_PATH = Path(
-    os.getenv(
-        "TRAIN_FILE_PATH",
-        "/app/data/sistema-crud/data/05_model_input/train.csv"
-    )
+    os.getenv("TRAIN_FILE_PATH", "/app/data/sistema-crud/data/05_model_input/train.csv")
 )
-DB_PATH = Path(
-    os.getenv("DB_PATH", "/app/data/crud.db")
-)
+DB_PATH = Path(os.getenv("DB_PATH", "/app/data/crud.db"))
 
 st.set_page_config(
     page_title="Sistema CRUD - Treinamento", page_icon="🤖", layout="wide"
@@ -257,6 +252,79 @@ else:
 
 st.markdown("---")
 
+# Seção de documentação Swagger
+st.header("📚 Documentação da API (Swagger)")
+st.markdown("Explore e teste todos os endpoints da API usando a interface Swagger.")
+
+# Verificar se a API está acessível antes de mostrar o Swagger
+try:
+    health_check = requests.get(f"{API_URL}/health", timeout=5)
+    if health_check.status_code == 200:
+        # Converter API_URL para localhost se estiver usando api:8000
+        if "api:8000" in API_URL:
+            swagger_url = "http://localhost:8000/swagger"
+            api_base_url = "http://localhost:8000"
+        else:
+            swagger_url = f"{API_URL}/swagger"
+            api_base_url = API_URL
+
+        # Status e links
+        col_status, col_link = st.columns([2, 1])
+        with col_status:
+            st.success("✅ API está online")
+        with col_link:
+            st.markdown(f"[🔗 Abrir Swagger em nova aba]({swagger_url})")
+
+        # Opção para mostrar/ocultar iframe
+        show_iframe = st.checkbox(
+            "📺 Mostrar Swagger UI embutido",
+            value=False,
+            help="Marque para exibir o Swagger UI diretamente nesta página",
+        )
+
+        if show_iframe:
+            # Usar expander para melhor controle
+            with st.expander(
+                "📚 Swagger UI - Interface de Documentação", expanded=True
+            ):
+                # Informação sobre o iframe
+                st.info(
+                    "💡 **Dica:** Se o iframe não carregar corretamente, use o link acima para abrir em nova aba."
+                )
+
+                # Iframe com altura ajustada e melhor configuração
+                try:
+                    st.components.v1.iframe(src=swagger_url, height=700, scrolling=True)
+                except Exception as iframe_error:
+                    st.warning(f"⚠️ Erro ao carregar iframe: {str(iframe_error)}")
+                    st.markdown(
+                        f"**Por favor, acesse diretamente:** [{swagger_url}]({swagger_url})"
+                    )
+
+        # Informações adicionais em colunas
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**🔗 Links úteis:**")
+            st.markdown(f"- [Swagger UI]({swagger_url})")
+            st.markdown(f"- [Health Check]({api_base_url}/health)")
+            st.markdown(f"- [OpenAPI Spec]({api_base_url}/openapi.json)")
+
+        with col2:
+            st.markdown("**📖 Endpoints principais:**")
+            st.markdown("- `/predict` - Fazer predições")
+            st.markdown("- `/train` - Treinar modelo")
+            st.markdown("- `/models` - Listar modelos")
+            st.markdown("- `/predictions` - Ver predições")
+    else:
+        st.warning("⚠️ API respondeu com erro. Verifique os logs.")
+except requests.exceptions.ConnectionError:
+    st.error("❌ API não está acessível. Verifique se o servidor Flask está rodando.")
+    st.info(f"💡 A URL configurada é: {API_URL}")
+except Exception as e:
+    st.error(f"❌ Erro ao verificar API: {str(e)}")
+
+st.markdown("---")
+
 # Informações adicionais
 st.sidebar.header("ℹ️ Informações")
 st.sidebar.markdown(
@@ -270,6 +338,7 @@ st.sidebar.markdown(
     
     ### Endpoints:
     - **API:** {API_URL}
+    - **Swagger UI:** {API_URL}/swagger
     - **Streamlit:** http://localhost:8501
     
     ### Arquivo de treino:
@@ -280,8 +349,6 @@ st.sidebar.markdown(
     - Tipo: {db_type}
     - Use a seção "Visualizar Banco de Dados" para explorar os dados
     """.format(
-        API_URL=API_URL,
-        TRAIN_FILE_PATH=TRAIN_FILE_PATH,
-        db_type=db_type
+        API_URL=API_URL, TRAIN_FILE_PATH=TRAIN_FILE_PATH, db_type=db_type
     )
 )
