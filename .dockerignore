@@ -25,13 +25,14 @@ sistema-crud/data/01_raw
 sistema-crud/data/02_intermediate
 sistema-crud/data/03_primary
 sistema-crud/data/04_feature
-sistema-crud/data/05_model_input
-sistema-crud/data/06_models
+# Manter 05_model_input e 06_models para o container
 sistema-crud/data/07_model_output
 sistema-crud/data/08_reporting
 train.csv
 .vscode/
 .idea/
+crud.db
+*.db
 
 
 

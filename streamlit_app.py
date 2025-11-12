@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -5,10 +6,16 @@ import requests
 import streamlit as st
 from sqlalchemy import create_engine, inspect
 
-# Configurações
-API_URL = "http://localhost:8000"
+# Configurações - usar variáveis de ambiente ou valores padrão
+API_URL = os.getenv("API_URL", "http://localhost:8000")
 TRAIN_FILE_PATH = Path(
-    r"C:\Users\rvdutra\Documents\Sistema-CRUD\sistema-crud\data\05_model_input\train.csv"
+    os.getenv(
+        "TRAIN_FILE_PATH",
+        "/app/data/sistema-crud/data/05_model_input/train.csv"
+    )
+)
+DB_PATH = Path(
+    os.getenv("DB_PATH", "/app/data/crud.db")
 )
 
 st.set_page_config(
@@ -164,12 +171,24 @@ st.markdown("---")
 
 # Seção de visualização do banco de dados
 st.header("🗄️ Visualizar Banco de Dados")
-st.markdown("Explore os dados armazenados no banco de dados SQLite.")
+st.markdown("Explore os dados armazenados no banco de dados.")
 
-DB_PATH = Path(r"C:\Users\rvdutra\Documents\Sistema-CRUD\crud.db")
-DB_URL = f"sqlite:///{DB_PATH}"
+# Usar PostgreSQL se DB_URL estiver configurado, caso contrário usar SQLite
+DB_URL_ENV = os.getenv("DB_URL")
+if DB_URL_ENV and DB_URL_ENV.startswith("postgresql"):
+    # Usar PostgreSQL
+    DB_URL = DB_URL_ENV
+    db_type = "PostgreSQL"
+else:
+    # Usar SQLite como fallback
+    DB_URL = f"sqlite:///{DB_PATH}"
+    db_type = "SQLite"
 
-if DB_PATH.exists():
+# Verificar se o banco existe (apenas para SQLite)
+if db_type == "SQLite" and not DB_PATH.exists():
+    st.error(f"❌ Banco de dados não encontrado em: {DB_PATH}")
+    st.info("💡 Execute: `python manage.py init-db` para criar o banco de dados.")
+else:
     try:
         engine = create_engine(DB_URL)
         inspector = inspect(engine)
@@ -233,11 +252,8 @@ if DB_PATH.exists():
         else:
             st.warning("⚠️ Nenhuma tabela encontrada no banco de dados.")
     except Exception as e:
-        st.error(f"❌ Erro ao acessar banco de dados: {str(e)}")
+        st.error(f"❌ Erro ao acessar banco de dados ({db_type}): {str(e)}")
         st.info("💡 Certifique-se de que o banco de dados existe e está acessível.")
-else:
-    st.error(f"❌ Banco de dados não encontrado em: {DB_PATH}")
-    st.info("💡 Execute: `python manage.py init-db` para criar o banco de dados.")
 
 st.markdown("---")
 
@@ -253,15 +269,19 @@ st.sidebar.markdown(
     5. Visualize as métricas e o banco de dados
     
     ### Endpoints:
-    - **API:** http://localhost:8000
+    - **API:** {API_URL}
+    - **Streamlit:** http://localhost:8501
     
     ### Arquivo de treino:
     O arquivo será salvo em:
-    `sistema-crud/data/05_model_input/train.csv`
+    `{TRAIN_FILE_PATH}`
     
-    ### Visualizar Banco de Dados:
+    ### Banco de Dados:
+    - Tipo: {db_type}
     - Use a seção "Visualizar Banco de Dados" para explorar os dados
-    - Ou use DB Browser for SQLite:
-      https://sqlitebrowser.org/
-    """
+    """.format(
+        API_URL=API_URL,
+        TRAIN_FILE_PATH=TRAIN_FILE_PATH,
+        db_type=db_type
+    )
 )

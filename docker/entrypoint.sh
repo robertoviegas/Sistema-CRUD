@@ -32,7 +32,7 @@ echo "[entrypoint] Running migrations/init-db..."
 python manage.py init-db || true
 
 echo "[entrypoint] Starting API..."
-exec gunicorn --bind 0.0.0.0:8000 --workers 2 --threads 4 --timeout 120 "app:create_app()"
+exec python manage.py run --host 0.0.0.0 --port 8000
 
 
 

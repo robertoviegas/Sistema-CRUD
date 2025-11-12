@@ -14,11 +14,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
 
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: sistema-crud-api
     environment:
       APP_ENV: dev
       DB_URL: postgresql+psycopg://crud:crud@db:5432/crud
@@ -32,8 +32,32 @@ services:
       - ./.env:/app/.env:ro
       - ./sistema-crud/data:/app/sistema-crud/data
       - ./sistema-crud/logs:/app/sistema-crud/logs
+    networks:
+      - app-network
+
+  streamlit:
+    image: sistema-crud-streamlit
+    environment:
+      API_URL: http://api:8000
+      DB_URL: postgresql+psycopg://crud:crud@db:5432/crud
+      TRAIN_FILE_PATH: /app/data/sistema-crud/data/05_model_input/train.csv
+      DB_PATH: /app/data/crud.db
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+      - db
+    volumes:
+      - ./sistema-crud/data:/app/data/sistema-crud/data
+      - ./crud.db:/app/data/crud.db
+    networks:
+      - app-network
 
 volumes:
   db_data:
+
+networks:
+  app-network:
+    driver: bridge
 
 

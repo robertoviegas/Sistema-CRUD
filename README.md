@@ -3,6 +3,47 @@
 API de predição com persistência, métricas por predição, retreino e troca de tipo de modelo (scikit-learn). Usa Kedro para pipelines de treinamento e salva modelos localmente.
 
 ### Como rodar
+
+#### Opção 1: Usando Docker (Recomendado)
+
+O projeto está configurado para rodar em 3 containers:
+- **PostgreSQL**: Banco de dados
+- **API Flask**: Servidor REST
+- **Streamlit**: Interface web
+
+```bash
+# 1. Construir e iniciar todos os containers
+docker-compose up --build
+
+# 2. Inicializar o banco de dados (em outro terminal)
+docker-compose exec api python manage.py init-db
+
+# 3. Executar migração se necessário
+docker-compose exec api python manage.py migrate-db
+
+# Acessar:
+# - API: http://localhost:8000
+# - Streamlit: http://localhost:8501
+# - PostgreSQL: localhost:5432
+```
+
+**Comandos úteis:**
+```bash
+# Parar containers
+docker-compose down
+
+# Ver logs
+docker-compose logs -f
+
+# Reconstruir containers
+docker-compose up --build
+
+# Executar comandos no container da API
+docker-compose exec api python manage.py <comando>
+```
+
+#### Opção 2: Desenvolvimento Local
+
 1. Ative seu ambiente conda: `conda activate <seu_ambiente>`
 2. pip install -r requirements.txt
 3. Configure o arquivo `.env` (já criado com valores padrão)
@@ -35,7 +76,11 @@ MODEL_FLAVOR=sklearn
 - python manage.py predict-csv train.csv --feature-cols "col1,col2,col3" --y-col "target" --limit 10 - Testa predições com CSV
 
 ### Interface Streamlit
-Para usar a interface gráfica:
+
+#### Com Docker:
+A interface Streamlit já está rodando automaticamente no container. Acesse: http://localhost:8501
+
+#### Desenvolvimento Local:
 1. Certifique-se de que o servidor Flask está rodando: `python manage.py run`
 2. Execute: `streamlit run streamlit_app.py`
 3. A interface abrirá no navegador onde você pode:
@@ -58,6 +103,10 @@ python manage.py predict-csv train.csv --feature-cols "MSSubClass,LotFrontage,Lo
 ### Estrutura do projeto
 - `app/` - API Flask, modelos DB, camada ML
 - `sistema-crud/` - Projeto Kedro completo (pipelines, conf, data)
+- `streamlit_app.py` - Interface web Streamlit
+- `Dockerfile` - Container da API Flask
+- `Dockerfile.streamlit` - Container do Streamlit
+- `docker-compose.yml` - Orquestração dos 3 containers
 - `train.csv` - Dataset de exemplo para testes
 
 ### Funcionalidades
