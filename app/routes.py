@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 
 from flask import Flask, jsonify, request
 from flask_swagger_ui import get_swaggerui_blueprint
@@ -256,8 +257,22 @@ def register_routes(app: Flask) -> None:
 
     @app.post("/train")
     def train():
-        result = run_training_kedro(settings.model_flavor)
+        # Obter target_column do body da requisição, usar padrão se não fornecido
+        body = request.get_json(force=True, silent=True) or {}
+        target_column = body.get("target_column", "SalePrice")
+
+        start_time = time.time()
+        result = run_training_kedro(settings.model_flavor, target_column=target_column)
+        training_time = time.time() - start_time
         with Session(engine) as session:
+            # Verificar se já existe um modelo antes de criar o novo
+            existing_model = (
+                session.execute(select(ModelRegistry).order_by(ModelRegistry.id.desc()))
+                .scalars()
+                .first()
+            )
+            is_retraining = existing_model is not None
+
             model_path = result.get("model_path")
             row = ModelRegistry(
                 flavor=settings.model_flavor,
@@ -266,15 +281,24 @@ def register_routes(app: Flask) -> None:
             )
             session.add(row)
             session.flush()
-            retr = Retraining(model_id=row.id, triggered_by="api", notes="kedro-train")
-            session.add(retr)
-            session.commit()
+
+            # Criar registro de retraining apenas se já existir um modelo anterior
+            retraining_id = None
+            if is_retraining:
+                retr = Retraining(
+                    model_id=row.id, triggered_by="api", notes="kedro-retrain"
+                )
+                session.add(retr)
+                session.commit()
+                retraining_id = retr.id
+            else:
+                session.commit()
+
             # Acessar atributos antes de sair do bloco with para evitar DetachedInstanceError
             model_id = row.id
             flavor = row.flavor
             version = row.version
             model_path_value = row.model_path
-            retraining_id = retr.id
         return jsonify(
             {
                 "model_id": model_id,
@@ -286,5 +310,7 @@ def register_routes(app: Flask) -> None:
                 "mape": float(result.get("mape", 0.0)),
                 "meape": float(result.get("meape", 0.0)),
                 "retraining_id": retraining_id,
+                "is_retraining": is_retraining,
+                "training_time_seconds": round(training_time, 2),
             }
         )

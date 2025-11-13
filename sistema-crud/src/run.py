@@ -10,7 +10,7 @@ from sistema_crud.pipelines.train.pipeline import create_pipeline
 
 
 def run_training_kedro(
-    flavor: str
+    flavor: str, target_column: str = "SalePrice"
 ) -> Dict[str, str | float]:
     pipeline = create_pipeline()
 
@@ -51,7 +51,7 @@ def run_training_kedro(
     train_params = params_config.get("train", {})
     # Atualizar com valores dinâmicos
     train_params["flavor"] = flavor
-    train_params["target_column"] = "SalePrice"
+    train_params["target_column"] = target_column
 
     # Adicionar parâmetros usando MemoryDataSet
     catalog.add("params:train", MemoryDataSet(train_params))

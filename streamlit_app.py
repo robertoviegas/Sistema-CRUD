@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import requests
 import streamlit as st
@@ -41,6 +42,10 @@ if uploaded_file is not None:
         st.dataframe(df.head(10), use_container_width=True)
         st.info(f"📈 Total de linhas: {len(df)} | Total de colunas: {len(df.columns)}")
 
+        # Mostrar colunas disponíveis para ajudar o usuário
+        with st.expander("📋 Colunas Disponíveis no Dataset"):
+            st.write("**Colunas:**", ", ".join(df.columns.tolist()))
+
         # Botão para salvar arquivo
         if st.button("💾 Salvar Arquivo", type="primary"):
             try:
@@ -63,6 +68,146 @@ st.markdown("---")
 st.header("🚀 Treinar Modelo")
 st.markdown("Execute o treinamento do modelo usando o arquivo salvo.")
 
+# Campo para variável resposta
+# Tentar carregar o dataset para mostrar as colunas disponíveis
+available_columns = []
+df_full = None
+if TRAIN_FILE_PATH.exists():
+    try:
+        df_full = pd.read_csv(TRAIN_FILE_PATH)
+        available_columns = df_full.columns.tolist()
+    except Exception:
+        pass
+
+if available_columns:
+    target_column = st.selectbox(
+        "📊 Variável Resposta (Target Column)",
+        options=available_columns,
+        index=(
+            available_columns.index("SalePrice")
+            if "SalePrice" in available_columns
+            else 0
+        ),
+        help="Selecione a coluna que será usada como variável resposta (target) no treinamento",
+    )
+else:
+    target_column = st.text_input(
+        "📊 Variável Resposta (Target Column)",
+        value="SalePrice",
+        help="Nome da coluna que será usada como variável resposta (target) no treinamento",
+        placeholder="Ex: SalePrice, price, target, etc.",
+    )
+
+# Seção informativa sobre processamento dos dados
+if df_full is not None and target_column:
+    st.markdown("---")
+    st.subheader("ℹ️ Processamento dos Dados (Pipeline Kedro)")
+
+    # Analisar quais colunas serão usadas
+    # Verificar se existe coluna "Id" (case-insensitive)
+    id_col = None
+    for col in df_full.columns:
+        if col.lower() == "id":
+            id_col = col
+            break
+
+    cols_to_remove = [target_column]
+    if id_col:
+        cols_to_remove.append(id_col)
+
+    remaining_cols = [col for col in df_full.columns if col not in cols_to_remove]
+
+    # Separar colunas numéricas e categóricas
+    numeric_cols = (
+        df_full[remaining_cols].select_dtypes(include=[np.number]).columns.tolist()
+    )
+    categorical_cols = (
+        df_full[remaining_cols].select_dtypes(exclude=[np.number]).columns.tolist()
+    )
+
+    # Informações sobre remoção
+    with st.expander("📋 Detalhes do Processamento", expanded=True):
+        st.markdown("### 🔄 Transformações Aplicadas:")
+
+        # Remoção de colunas
+        st.markdown("#### 1️⃣ Colunas Removidas:")
+        removal_info = []
+        if id_col:
+            removal_info.append(
+                f"**Coluna '{id_col}'**: Removida automaticamente (identificador, não é feature)"
+            )
+        if target_column in df_full.columns:
+            removal_info.append(
+                f"**Coluna '{target_column}'**: Removida (variável resposta/target)"
+            )
+
+        if removal_info:
+            for info in removal_info:
+                st.markdown(f"- {info}")
+        else:
+            st.info("Nenhuma coluna será removida.")
+
+        # Variáveis numéricas
+        st.markdown("#### 2️⃣ Variáveis Numéricas (Serão Usadas):")
+        if numeric_cols:
+            st.success(
+                f"✅ **{len(numeric_cols)} colunas numéricas** serão usadas no treinamento:"
+            )
+            st.code(
+                ", ".join(
+                    numeric_cols[:10] + (["..."] if len(numeric_cols) > 10 else [])
+                ),
+                language=None,
+            )
+            if len(numeric_cols) > 10:
+                st.caption(f"Total: {len(numeric_cols)} colunas numéricas")
+            st.info(
+                "💡 **Processamento**: Valores NaN serão preenchidos com 0 antes do treinamento."
+            )
+        else:
+            st.warning(
+                "⚠️ Nenhuma coluna numérica encontrada (além da variável resposta)."
+            )
+
+        # Variáveis categóricas
+        st.markdown("#### 3️⃣ Variáveis Categóricas (Serão Ignoradas):")
+        if categorical_cols:
+            st.warning(
+                f"⚠️ **{len(categorical_cols)} colunas categóricas** serão **ignoradas** no treinamento:"
+            )
+            st.code(
+                ", ".join(
+                    categorical_cols[:10]
+                    + (["..."] if len(categorical_cols) > 10 else [])
+                ),
+                language=None,
+            )
+            if len(categorical_cols) > 10:
+                st.caption(f"Total: {len(categorical_cols)} colunas categóricas")
+            st.info(
+                "💡 **Nota**: O pipeline atual processa apenas variáveis numéricas. Para usar variáveis categóricas, é necessário aplicar encoding (ex: One-Hot Encoding, Label Encoding) antes do treinamento."
+            )
+        else:
+            st.success(
+                "✅ Nenhuma coluna categórica encontrada. Todas as features são numéricas."
+            )
+
+        # Resumo
+        st.markdown("---")
+        st.markdown("### 📊 Resumo:")
+        col_summary1, col_summary2, col_summary3 = st.columns(3)
+        with col_summary1:
+            st.metric("Colunas Totais", len(df_full.columns))
+        with col_summary2:
+            st.metric("Features Numéricas", len(numeric_cols))
+        with col_summary3:
+            st.metric("Features Categóricas", len(categorical_cols))
+
+        if len(numeric_cols) == 0:
+            st.error(
+                "❌ **Atenção**: Não há colunas numéricas disponíveis para treinamento (além da variável resposta). Verifique seu dataset."
+            )
+
 col1, col2 = st.columns([1, 1])
 
 with col1:
@@ -71,11 +216,18 @@ with col1:
             st.error(
                 "❌ Arquivo de treino não encontrado! Por favor, faça upload do arquivo primeiro."
             )
+        elif not target_column or target_column.strip() == "":
+            st.error(
+                "❌ Por favor, informe o nome da variável resposta (target column)."
+            )
         else:
             with st.spinner("🔄 Treinando modelo... Isso pode levar alguns minutos."):
                 try:
-                    # Fazer requisição para o endpoint de treino
-                    response = requests.post(f"{API_URL}/train", timeout=300)
+                    # Fazer requisição para o endpoint de treino com target_column
+                    payload = {"target_column": target_column.strip()}
+                    response = requests.post(
+                        f"{API_URL}/train", json=payload, timeout=300
+                    )
 
                     if response.status_code == 200:
                         result = response.json()

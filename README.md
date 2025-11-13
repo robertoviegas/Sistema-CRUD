@@ -12,6 +12,7 @@ O projeto está configurado para rodar em 3 containers:
 - **Streamlit**: Interface web
 
 ```bash
+$env:DOCKER_BUILDKIT=0;docker-compose up --build
 # 1. Construir e iniciar todos os containers
 docker-compose up --build
 

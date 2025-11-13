@@ -32,7 +32,13 @@ echo "[entrypoint] Running migrations/init-db..."
 python manage.py init-db || true
 
 echo "[entrypoint] Starting API..."
-exec python manage.py run --host 0.0.0.0 --port 8000
+# Habilitar debug e reload quando APP_ENV=dev para hot-reload durante desenvolvimento
+if [[ "$APP_ENV" == "dev" ]]; then
+    echo "[entrypoint] Development mode: enabling debug and auto-reload"
+    exec python manage.py run --host 0.0.0.0 --port 8000 --debug --reload
+else
+    exec python manage.py run --host 0.0.0.0 --port 8000
+fi
 
 
 

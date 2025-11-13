@@ -33,8 +33,11 @@ services:
         condition: service_healthy
     volumes:
       - ./.env:/app/.env:ro
-      - ./sistema-crud/data:/app/sistema-crud/data
-      - ./sistema-crud/logs:/app/sistema-crud/logs
+      - ./app:/app/app:rw
+      - ./sistema-crud:/app/sistema-crud:rw
+      - ./manage.py:/app/manage.py:rw
+      - ./sistema-crud/data:/app/sistema-crud/data:rw
+      - ./sistema-crud/logs:/app/sistema-crud/logs:rw
     networks:
       - app-network
     healthcheck:
@@ -62,8 +65,10 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - ./sistema-crud/data:/app/data/sistema-crud/data
-      - ./crud.db:/app/data/crud.db
+      - ./streamlit_app.py:/app/streamlit_app.py:rw
+      - ./.streamlit:/app/.streamlit:ro
+      - ./sistema-crud/data:/app/data/sistema-crud/data:rw
+      - ./crud.db:/app/data/crud.db:rw
     networks:
       - app-network
 
